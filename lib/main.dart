@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sudoku_parts/sudoku_solver.dart';
 
 void main() => runApp(MyApp());
 
@@ -6,16 +7,32 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Sudoku Solver',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: SudokuSolverPage(),
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text("Sudoku!"),
+        ),
+        body: SudokuSolverPage(),
+      ),
     );
   }
 }
 
-class SudokuSolverPage extends StatelessWidget {
+class SudokuSolverPage extends StatefulWidget {
+  @override
+  _SudokuSolverPageState createState() => _SudokuSolverPageState();
+}
+
+class _SudokuSolverPageState extends State<SudokuSolverPage> {
+  List<int> _activeNumber = [0];
+
+  List<List<int>> _board = List.generate(9, (_) => List.generate(9, (_) => 0));
+
+  final solver = SudokuSolver();
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -24,14 +41,14 @@ class SudokuSolverPage extends StatelessWidget {
           flex: 6,
           child: Padding(
             padding: const EdgeInsets.all(10.0),
-            child: SudokuBoard(),
+            child: SudokuBoard(_board, _activeNumber),
           ),
         ),
         Expanded(
           flex: 3,
           child: Padding(
             padding: const EdgeInsets.all(8.0),
-            child: KeyPad(),
+            child: KeyPad(_activeNumber),
           ),
         ),
         Expanded(
@@ -46,6 +63,9 @@ class SudokuSolverPage extends StatelessWidget {
                     child: Text('Solve!'),
                     onPressed: () {
                       debugPrint('Solving Board');
+                      setState(() {
+                        solver.solveSudoku(this._board);
+                      });
                     },
                   ),
                 ),
@@ -58,6 +78,9 @@ class SudokuSolverPage extends StatelessWidget {
                     child: Text('Reset Board'),
                     onPressed: () {
                       debugPrint('Resetting Board');
+                      setState(() {
+                        _resetBoard();
+                      });
                     },
                   ),
                 ),
@@ -68,12 +91,26 @@ class SudokuSolverPage extends StatelessWidget {
       ],
     );
   }
+
+  void _resetBoard() {
+    this._board = List.generate(9, (_) => List.generate(9, (_) => 0));
+    this._activeNumber = [0];
+  }
 }
 
 class SudokuBoard extends StatelessWidget {
+  final List<List<int>> board;
+  final List<int> activeNumber;
+
+  SudokuBoard(this.board, this.activeNumber);
+
   @override
   Widget build(BuildContext context) {
     return Table(
+      border: TableBorder(
+        left: BorderSide(width: 3.0, color: Colors.black),
+        top: BorderSide(width: 3.0, color: Colors.black),
+      ),
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
       children: _getTableRows(),
     );
@@ -87,29 +124,58 @@ class SudokuBoard extends StatelessWidget {
 
   List<Widget> _getRow(int rowNumber) {
     return List.generate(9, (int colNumber) {
-      return SudokuCell(rowNumber, colNumber);
+      return Container(
+        decoration: BoxDecoration(
+          border: Border(
+            right: BorderSide(
+              width: (colNumber % 3 == 2) ? 3.0 : 1.0,
+              color: Colors.black,
+            ),
+            bottom: BorderSide(
+              width: (rowNumber % 3 == 2) ? 3.0 : 1.0,
+              color: Colors.black,
+            ),
+          ),
+        ),
+        child: SudokuCell(rowNumber, colNumber, this.board, this.activeNumber),
+      );
     });
   }
 }
 
-class SudokuCell extends StatelessWidget {
+class SudokuCell extends StatefulWidget {
   final int row, col;
+  final List<List<int>> board;
+  final List<int> activeNumber;
 
-  SudokuCell(this.row, this.col);
+  SudokuCell(this.row, this.col, this.board, this.activeNumber);
 
+  @override
+  _SudokuCellState createState() => _SudokuCellState();
+}
+
+class _SudokuCellState extends State<SudokuCell> {
   @override
   Widget build(BuildContext context) {
     return InkResponse(
       enableFeedback: true,
       onTap: () {
-        debugPrint('Setting ($row, $col) to active_number');
+        setState(() {
+          this.widget.board[this.widget.row][this.widget.col] =
+              this.widget.activeNumber[0];
+        });
       },
       child: SizedBox(
         width: 30,
         height: 30,
         child: Container(
           child: Center(
-            child: Text('-1'),
+            child: Text(this.widget.board[this.widget.row][this.widget.col] == 0
+                ? ''
+                : this
+                    .widget
+                    .board[this.widget.row][this.widget.col]
+                    .toString()),
           ),
         ),
       ),
@@ -120,6 +186,9 @@ class SudokuCell extends StatelessWidget {
 class KeyPad extends StatelessWidget {
   final int numRows = 2;
   final int numColumns = 5;
+  final List<int> activeNumber;
+
+  KeyPad(this.activeNumber);
 
   @override
   Widget build(BuildContext context) {
@@ -142,7 +211,8 @@ class KeyPad extends StatelessWidget {
     return List.generate(this.numColumns, (int colNumber) {
       return Padding(
         padding: const EdgeInsets.all(5),
-        child: KeyPadCell(this.numColumns * rowNumber + colNumber),
+        child: KeyPadCell(
+            this.numColumns * rowNumber + colNumber, this.activeNumber),
       );
     });
   }
@@ -150,8 +220,9 @@ class KeyPad extends StatelessWidget {
 
 class KeyPadCell extends StatelessWidget {
   final int number;
+  final List<int> activeNumber;
 
-  KeyPadCell(this.number);
+  KeyPadCell(this.number, this.activeNumber);
 
   @override
   Widget build(BuildContext context) {
@@ -159,10 +230,8 @@ class KeyPadCell extends StatelessWidget {
       width: 30,
       height: 50,
       child: FlatButton(
-        splashColor: Colors.transparent,
-        highlightColor: Colors.transparent,
         onPressed: () {
-          final String message = number == 0
+          final String message = this.number == 0
               ? 'Use to clear squares'
               : 'Fill all squares with value $number';
           Scaffold.of(context).hideCurrentSnackBar();
@@ -171,7 +240,8 @@ class KeyPadCell extends StatelessWidget {
             duration: Duration(seconds: 1),
           ));
 
-          // Change the active value here...
+          // Setting activeNumber here...
+          this.activeNumber[0] = this.number;
         },
         child: Text(
           '$number',
