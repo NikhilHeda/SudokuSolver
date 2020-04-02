@@ -125,13 +125,14 @@ class SudokuCell extends StatelessWidget {
         height: 30,
         child: Container(
           child: Center(
-            child: Consumer<SudokuChangeNotifier>(
-                builder: (context, sudokuChangeNotifier, child) {
-              return Text(
+            child: Selector<SudokuChangeNotifier, String>(
+              builder: (context, value, child) {
                 // Using board cell value.
-                sudokuChangeNotifier.getBoardCell(this.row, this.col),
-              );
-            }),
+                return Text(value);
+              },
+              selector: (context, sudokuChangeNotifier) =>
+                  sudokuChangeNotifier.getBoardCell(this.row, this.col),
+            ),
           ),
         ),
       ),
