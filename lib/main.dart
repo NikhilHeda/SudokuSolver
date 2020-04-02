@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:sudoku_parts/sudoku_solver.dart';
 
 void main() => runApp(MyApp());
@@ -15,82 +16,71 @@ class MyApp extends StatelessWidget {
         appBar: AppBar(
           title: Text("Sudoku!"),
         ),
-        body: SharedStateWidget(
-          child: SudokuSolverPage(),
-        ),
+        body: SudokuSolverPage(),
       ),
     );
   }
 }
 
-class SudokuSolverPage extends StatefulWidget {
-  @override
-  _SudokuSolverPageState createState() => _SudokuSolverPageState();
-}
-
-class _SudokuSolverPageState extends State<SudokuSolverPage> {
+class SudokuSolverPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        Expanded(
-          flex: 6,
-          child: Padding(
-            padding: const EdgeInsets.all(10.0),
-            child: SudokuBoard(),
+    return ChangeNotifierProvider<SudokuChangeNotifier>(
+      create: (context) => SudokuChangeNotifier(),
+      child: Column(
+        children: <Widget>[
+          Expanded(
+            flex: 6,
+            child: Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: SudokuBoard(),
+            ),
           ),
-        ),
-        Expanded(
-          flex: 3,
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: KeyPad(),
+          Expanded(
+            flex: 3,
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: KeyPad(),
+            ),
           ),
-        ),
-        Expanded(
-          flex: 1,
-          child: Row(
-            children: <Widget>[
-              Expanded(
-                flex: 5,
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: RaisedButton(
-                    child: Text('Solve!'),
-                    onPressed: () {
-                      debugPrint('Solving Board');
-                      setState(() {
-                        // Rebuild state, as board changes to solved state
-                        SharedStateWidget.of(context)
-                            .sudokuSolverService
-                            .solveBoard();
-                      });
-                    },
+          Expanded(
+            flex: 1,
+            child: Consumer<SudokuChangeNotifier>(
+                builder: (context, sudokuChangeNotifier, child) {
+              return Row(
+                children: <Widget>[
+                  Expanded(
+                    flex: 5,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: RaisedButton(
+                        child: Text('Solve!'),
+                        onPressed: () {
+                          debugPrint('Solving Board');
+                          sudokuChangeNotifier.solveBoard();
+                        },
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              Expanded(
-                flex: 5,
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: RaisedButton(
-                    child: Text('Reset Board'),
-                    onPressed: () {
-                      debugPrint('Resetting Board');
-                      setState(() {
-                        // Rebuild state, as board resets
-                        SharedStateWidget.of(context)
-                            .sudokuSolverService
-                            .resetBoard();
-                      });
-                    },
+                  Expanded(
+                    flex: 5,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: RaisedButton(
+                        child: Text('Reset Board'),
+                        onPressed: () {
+                          debugPrint('Resetting Board');
+                          sudokuChangeNotifier.resetBoard();
+                        },
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ],
+                ],
+              );
+            }),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -135,40 +125,31 @@ class SudokuBoard extends StatelessWidget {
   }
 }
 
-class SudokuCell extends StatefulWidget {
+class SudokuCell extends StatelessWidget {
   final int row, col;
 
   SudokuCell(this.row, this.col);
 
   @override
-  _SudokuCellState createState() => _SudokuCellState();
-}
-
-class _SudokuCellState extends State<SudokuCell> {
-  @override
   Widget build(BuildContext context) {
     return InkResponse(
       enableFeedback: true,
       onTap: () {
-        // Needs to rebuild widget, since board value changes
-        setState(() {
-          // Reading activeNumber here - Setting board[row][col] to activeNumber
-          SharedStateWidget.of(context)
-              .sudokuSolverService
-              .setBoardCell(this.widget.row, this.widget.col);
-        });
+        Provider.of<SudokuChangeNotifier>(context, listen: false)
+            .setBoardCell(this.row, this.col);
       },
       child: SizedBox(
         width: 30,
         height: 30,
         child: Container(
           child: Center(
-            child: Text(
-              // Using board cell value.
-              SharedStateWidget.of(context)
-                  .sudokuSolverService
-                  .getBoardCell(this.widget.row, this.widget.col),
-            ),
+            child: Consumer<SudokuChangeNotifier>(
+                builder: (context, sudokuChangeNotifier, child) {
+              return Text(
+                // Using board cell value.
+                sudokuChangeNotifier.getBoardCell(this.row, this.col),
+              );
+            }),
           ),
         ),
       ),
@@ -229,8 +210,7 @@ class KeyPadCell extends StatelessWidget {
           ));
 
           // Setting activeNumber here...
-          SharedStateWidget.of(context)
-              .sudokuSolverService
+          Provider.of<SudokuChangeNotifier>(context, listen: false)
               .setActiveNumber(this.number);
         },
         child: Text(
@@ -241,22 +221,7 @@ class KeyPadCell extends StatelessWidget {
   }
 }
 
-class SharedStateWidget extends InheritedWidget {
-  final SudokuSolverService sudokuSolverService =
-      SudokuSolverService();
-
-  SharedStateWidget({key, child}) : super(key: key, child: child);
-
-  static SharedStateWidget of(BuildContext context) {
-    return context.dependOnInheritedWidgetOfExactType<SharedStateWidget>();
-  }
-
-  @override
-  bool updateShouldNotify(SharedStateWidget old) =>
-      this.sudokuSolverService != old.sudokuSolverService;
-}
-
-class SudokuSolverService {
+class SudokuChangeNotifier with ChangeNotifier {
   List<List<int>> board = List.generate(9, (_) => List.generate(9, (_) => 0));
   int activeNumber = 0;
   final solver = SudokuSolver();
@@ -267,6 +232,7 @@ class SudokuSolverService {
 
   void setBoardCell(int row, int col) {
     this.board[row][col] = this.activeNumber;
+    notifyListeners();
   }
 
   void setActiveNumber(int number) {
@@ -275,10 +241,12 @@ class SudokuSolverService {
 
   void solveBoard() {
     solver.solveSudoku(this.board);
+    notifyListeners();
   }
 
   void resetBoard() {
     this.board = List.generate(9, (_) => List.generate(9, (_) => 0));
     this.activeNumber = 0;
+    notifyListeners();
   }
 }
