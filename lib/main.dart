@@ -16,7 +16,10 @@ class MyApp extends StatelessWidget {
         appBar: AppBar(
           title: Text("Sudoku!"),
         ),
-        body: SudokuSolverPage(),
+        body: ChangeNotifierProvider<SudokuChangeNotifier>(
+          create: (context) => SudokuChangeNotifier(),
+          child: SudokuSolverPage(),
+        ),
       ),
     );
   }
@@ -25,62 +28,56 @@ class MyApp extends StatelessWidget {
 class SudokuSolverPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider<SudokuChangeNotifier>(
-      create: (context) => SudokuChangeNotifier(),
-      child: Column(
-        children: <Widget>[
-          Expanded(
-            flex: 6,
-            child: Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: SudokuBoard(),
-            ),
+    return Column(
+      children: <Widget>[
+        Expanded(
+          flex: 6,
+          child: Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: SudokuBoard(),
           ),
-          Expanded(
-            flex: 3,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: KeyPad(),
-            ),
+        ),
+        Expanded(
+          flex: 3,
+          child: Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: KeyPad(),
           ),
-          Expanded(
-            flex: 1,
-            child: Consumer<SudokuChangeNotifier>(
-                builder: (context, sudokuChangeNotifier, child) {
-              return Row(
-                children: <Widget>[
-                  Expanded(
-                    flex: 5,
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: RaisedButton(
-                        child: Text('Solve!'),
-                        onPressed: () {
-                          debugPrint('Solving Board');
-                          sudokuChangeNotifier.solveBoard();
-                        },
-                      ),
-                    ),
+        ),
+        Expanded(
+          flex: 1,
+          child: Row(
+            children: <Widget>[
+              Expanded(
+                flex: 5,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: RaisedButton(
+                    child: Text('Solve!'),
+                    onPressed: () {
+                      debugPrint('Solving Board');
+                      Provider.of<SudokuChangeNotifier>(context, listen: false).solveBoard();
+                    },
                   ),
-                  Expanded(
-                    flex: 5,
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: RaisedButton(
-                        child: Text('Reset Board'),
-                        onPressed: () {
-                          debugPrint('Resetting Board');
-                          sudokuChangeNotifier.resetBoard();
-                        },
-                      ),
-                    ),
+                ),
+              ),
+              Expanded(
+                flex: 5,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: RaisedButton(
+                    child: Text('Reset Board'),
+                    onPressed: () {
+                      debugPrint('Resetting Board');
+                      Provider.of<SudokuChangeNotifier>(context, listen: false).resetBoard();
+                    },
                   ),
-                ],
-              );
-            }),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -135,6 +132,7 @@ class SudokuCell extends StatelessWidget {
     return InkResponse(
       enableFeedback: true,
       onTap: () {
+        // Set the board cell to activeNumber...
         Provider.of<SudokuChangeNotifier>(context, listen: false)
             .setBoardCell(this.row, this.col);
       },
@@ -143,6 +141,7 @@ class SudokuCell extends StatelessWidget {
         height: 30,
         child: Container(
           child: Center(
+            // Using selector to rebuild, only if the value changes
             child: Selector<SudokuChangeNotifier, String>(
               builder: (context, value, child) {
                 // Using board cell value.
