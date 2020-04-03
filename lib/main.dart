@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sudoku_parts/sudoku_solver.dart';
 
 void main() => runApp(MyApp());
 
@@ -130,11 +131,16 @@ class SudokuBoard extends StatelessWidget {
   }
 }
 
-class SudokuCell extends StatelessWidget {
+class SudokuCell extends StatefulWidget {
   final int row, col;
 
   SudokuCell(this.row, this.col);
 
+  @override
+  _SudokuCellState createState() => _SudokuCellState();
+}
+
+class _SudokuCellState extends State<SudokuCell> {
   @override
   Widget build(BuildContext context) {
     return InkResponse(
