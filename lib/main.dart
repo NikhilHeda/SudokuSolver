@@ -56,7 +56,8 @@ class SudokuSolverPage extends StatelessWidget {
                     child: Text('Solve!'),
                     onPressed: () {
                       debugPrint('Solving Board');
-                      Provider.of<SudokuChangeNotifier>(context, listen: false).solveBoard();
+                      Provider.of<SudokuChangeNotifier>(context, listen: false)
+                          .solveBoard();
                     },
                   ),
                 ),
@@ -69,7 +70,8 @@ class SudokuSolverPage extends StatelessWidget {
                     child: Text('Reset Board'),
                     onPressed: () {
                       debugPrint('Resetting Board');
-                      Provider.of<SudokuChangeNotifier>(context, listen: false).resetBoard();
+                      Provider.of<SudokuChangeNotifier>(context, listen: false)
+                          .resetBoard();
                     },
                   ),
                 ),
@@ -232,6 +234,8 @@ class SudokuChangeNotifier with ChangeNotifier {
 
   void setBoardCell(int row, int col) {
     this.board[row][col] = this.activeNumber;
+    // Notifying listeners, as board[row][col] changed
+    // so need to rebuild SudokuCell using board[row][col].
     notifyListeners();
   }
 
@@ -241,12 +245,16 @@ class SudokuChangeNotifier with ChangeNotifier {
 
   void solveBoard() {
     solver.solveSudoku(this.board);
+    // Notifying listeners, as board changed
+    // so need to rebuild all widgets using board.
     notifyListeners();
   }
 
   void resetBoard() {
     this.board = List.generate(9, (_) => List.generate(9, (_) => 0));
     this.activeNumber = 0;
+    // Notifying listeners, as board changed
+    // so need to rebuild all widgets using board.
     notifyListeners();
   }
 }
